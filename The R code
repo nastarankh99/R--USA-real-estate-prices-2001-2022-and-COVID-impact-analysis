@@ -1,0 +1,37 @@
+install.packages(c("dplyr", "ggplot2", "lubridate", "tseries"))
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(magrittr)
+
+temp_file <- tempfile(fileext= ".csv")
+datapath <- "C:/Users/98910/Desktop/Real_Estate_Sales_2001-2022_GL.csv"
+##to ask R to download a dataset from the original sorce:
+##download.file(url1, destfile = temp_file, mode="wb") #pay attention to wb to avoid data corruption for non-text data or special characters
+org_data_set <- read_csv(datapath)
+str(org_data_set)
+summary(org_data_set)
+
+org_data_set$`Date Recorded`<- as.Date(org_data_set$`Date Recorded`, format= "%Y-%m-%d")
+org_data_set <- org_data_set[, c("Date Recorded", "Town", "Sale Amount")]
+colSums(is.na(org_data_set)) 
+org_data_set <- na.omit(org_data_set)
+
+
+org_data_set$period <- ifelse(year(org_data_set$`Date Recorded`) < 2020, "Pre-Covid", "Post-Covid")
+
+
+yearly_prices <- aggregate(org_data_set$`Sale Amount` ~ year + period, 
+                           data = transform(org_data_set, 
+                                            year = year(`Date Recorded`)), 
+                           FUN = median)
+
+str(yearly_prices)
+colnames(yearly_prices)[which(names(yearly_prices) == "org_data_set$`Sale Amount`")] <- "median_price"
+
+
+ggplot(yearly_prices, aes(x = year, y = median_price, color = period)) +
+  geom_line(size = 1) +
+  labs(title = "Median Real Estate Prices Over Time",
+       x = "Year", y = "Median Price") +
+  theme_minimal()
